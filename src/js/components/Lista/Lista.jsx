@@ -1,51 +1,83 @@
-import React from "react";
+import React, { useEffect } from "react";
 import styles from "./Lista.module.css";
 import { useState } from "react";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
 
 const Lista = () => {
+    const [tareas, setTareas] = useState([]);
+    const [nuevaTarea, setNuevaTarea] = useState("");
+    const user = "GuidoCanso";
+    const apiUrl = `https://playground.4geeks.com/todo/users/${user}`;
 
-    const [tareas, setTareas] = useState([
-        { id: 1, nombre: "Pasear al perro", completada: false },
-        { id: 2, nombre: "Ir de compras", completada: false },
-        { id: 3, nombre: "Almorzar en familia", completada: false },
-        { id: 4, nombre: "Construir una casa", completada: false },
-    ]);
-    
-    const [nuevaTarea, setNuevaTarea] = useState(""); 
+    // Crear usuario en la API
+    const createUser = () => {
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify([]) // La API espera un array vacío
+        })
+            .then(response => response.json())
+            .then(() => getTareas()) // Una vez creado, obtenemos las tareas
+            .catch(error => console.error('Error al crear usuario:', error));
+    };
+
+    // Obtener tareas de la API
+    const getTareas = () => {
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setTareas(data);
+                }
+            })
+            .catch(error => console.error('Error al obtener tareas:', error));
+    };
+
+    // Actualizar lista de tareas en la API
+    const updateTareas = (nuevaLista) => {
+        fetch(apiUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(nuevaLista)
+        })
+            .then(response => response.json())
+            .then(() => getTareas()) // Recargamos la lista desde la API
+            .catch(error => console.error('Error al actualizar tareas:', error));
+    };
+
+    useEffect(() => {
+        createUser();
+    }, []);
 
     const handleInput = (e) => {
-        setNuevaTarea(e.target.value); 
+        setNuevaTarea(e.target.value);
     };
 
     const agregarTarea = () => {
         if (nuevaTarea.trim() === "") return;
 
-        const nueva = {
-            id: Date.now(),
-            nombre: nuevaTarea,
-            completada: false
-        };
-        setTareas([...tareas, nueva]);
+        const nueva = { label: nuevaTarea, done: false };
+        const nuevaLista = [...tareas, nueva];
+        setTareas(nuevaLista);
         setNuevaTarea("");
+        updateTareas(nuevaLista);
     };
 
-    const eliminarTarea = (id) => {
-        setTareas(tareas.filter(tarea => tarea.id !== id));
+    const eliminarTarea = (index) => {
+        const nuevaLista = tareas.filter((_, i) => i !== index);
+        setTareas(nuevaLista);
+        updateTareas(nuevaLista);
     };
 
-    const toggleCompletada = (id) => {
-        setTareas(tareas.map(tarea =>
-            tarea.id === id ? { ...tarea, completada: !tarea.completada } : tarea
-        ));
+    const limpiarTareas = () => {
+        setTareas([]);
+        updateTareas([]);
     };
 
     return (
         <div className={styles.container}>
-            <div>
-                <h1>Lista de tareas</h1>
-            </div>
+            <h1>Lista de tareas</h1>
             <div className={styles.lista}>
                 <ul>
                     <li>
@@ -56,28 +88,26 @@ const Lista = () => {
                             onChange={handleInput}
                             onKeyPress={(e) => e.key === "Enter" && agregarTarea()}
                         />
-                        <button onClick={agregarTarea}>Agregar</button> { }
+                        <button onClick={agregarTarea}>Agregar</button>
                     </li>
-                    {tareas.map((tarea) => (
-                        <li key={tarea.id}>
-                            <input
-                                type="checkbox"
-                                checked={tarea.completada}
-                                onChange={() => toggleCompletada(tarea.id)}
-                            />
-                            <span>{tarea.nombre}</span>
+                    {tareas.map((tarea, index) => (
+                        <li key={index}>
+                            <span>{tarea.label}</span>
                             <i
                                 className="fa-solid fa-trash-can"
                                 role="button"
-                                onClick={() => eliminarTarea(tarea.id)}
+                                onClick={() => eliminarTarea(index)}
                                 style={{ cursor: "pointer", marginLeft: "10px" }}>
                             </i>
                         </li>
                     ))}
-
                 </ul>
+                {tareas.length > 0 && (
+                    <button onClick={limpiarTareas} style={{ marginTop: "10px" }}>Limpiar Todo</button>
+                )}
             </div>
         </div>
     );
 };
+
 export default Lista;
